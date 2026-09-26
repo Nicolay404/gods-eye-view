@@ -21,6 +21,9 @@ export function createApplicationEarthquakeHistory(options) {
     viewQuery: (viewer) => earthquakeHistoryQuery(viewRectangleDegrees(viewer)),
     showYear: true,
     fillAlpha: { significant: 0.22, other: 0.12 },
+    // A century of great earthquakes overlaps along every subduction zone; at
+    // the live layer's size an M9.5 disc alone spans ~700 km.
+    radiusScale: 0.3,
     ...options,
   });
 }

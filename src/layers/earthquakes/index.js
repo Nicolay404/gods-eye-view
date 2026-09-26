@@ -31,6 +31,7 @@ export function createEarthquakesLayer({
   viewQuery = null,
   showYear = false,
   fillAlpha = { significant: 0.4, other: 0.3 },
+  radiusScale = 1,
 } = {}) {
   if (typeof source?.getSnapshot !== 'function')
     throw new TypeError('Earthquakes require a snapshot source');
@@ -91,8 +92,10 @@ export function createEarthquakesLayer({
       if (!_enabled || !_dataSource) return false;
       const query = viewQuery ? viewQuery(viewer ?? _viewer) : null;
       if (viewQuery) {
+        // Nothing to fetch is success, not a rejection: the lifecycle reads a
+        // `false` refresh as a failed one and marks the layer DEGRADED.
         if (!query || query.key === _shownKey || query.key === _pendingKey)
-          return false;
+          return true;
         if (query.key === _failed?.key && Date.now() - _failed.at < 60000)
           return false;
       }
@@ -123,7 +126,7 @@ export function createEarthquakesLayer({
           time,
         } of rows) {
           count++;
-          const baseRadius = Math.pow(2, mag) * 1000;
+          const baseRadius = Math.pow(2, mag) * 1000 * radiusScale;
           const color = depthColor(depthKm || 0);
           const isSignificant = mag >= 5.0;
           const fill = isSignificant ? fillAlpha.significant : fillAlpha.other;

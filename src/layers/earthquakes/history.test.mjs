@@ -179,7 +179,9 @@ test('the layer fetches once per distinct view and labels carry the year', async
     return [QUAKE_1953];
   }, viewRef);
   assert.equal(await h.layer.update(h.viewer), true);
-  assert.equal(await h.layer.update(h.viewer), false, 'same view, no refetch');
+  // Same view: no request, and still a SUCCESSFUL refresh. The lifecycle
+  // treats `false` as a rejected refresh and marks the layer DEGRADED.
+  assert.equal(await h.layer.update(h.viewer), true, 'same view, no refetch');
   assert.equal(queries.length, 1);
   assert.equal(h.layer.getStats().count, 1);
   const [sourceId, cohort] = h.entries.at(-1);
