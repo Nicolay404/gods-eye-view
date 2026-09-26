@@ -777,6 +777,152 @@
   cursor: default;
 }
 
+/* Sentinel-2 time tools: PLAY and COMPARE under the year stepper. */
+.s2-compare {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.s2-compare[hidden],
+.s2-compare [hidden] {
+  display: none !important;
+}
+
+.s2-compare-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.s2-compare-btn,
+.s2-compare-mode,
+.s2-compare-step {
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.s2-compare-btn {
+  flex: 1 1 0;
+}
+
+.s2-compare-btn:hover,
+.s2-compare-mode:hover,
+.s2-compare-step:hover,
+.s2-compare-btn:focus-visible,
+.s2-compare-mode:focus-visible,
+.s2-compare-step:focus-visible {
+  color: var(--text-primary);
+  border-color: var(--glass-border-hover);
+}
+
+.s2-compare-btn[aria-pressed='true'],
+.s2-compare-mode.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.s2-compare-a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent);
+}
+
+.s2-compare-tag {
+  color: var(--text-dim);
+  font-size: 9px;
+}
+
+.s2-compare-step {
+  padding: 2px 6px;
+  border: 0;
+  background: transparent;
+}
+
+.s2-compare-fade {
+  flex: 1 1 80px;
+  min-width: 80px;
+  accent-color: var(--accent);
+}
+
+/* Divider between year A (left) and the basemap year B (right). */
+#s2-compare-split-line {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: var(--s2-compare-split, 50%);
+  z-index: 130;
+  width: 1px;
+  pointer-events: none;
+  background: rgba(218, 241, 247, 0.76);
+  box-shadow: 0 0 12px rgba(94, 216, 239, 0.72);
+}
+
+#s2-compare-split-line[hidden] {
+  display: none;
+}
+
+#s2-compare-split-line span {
+  position: absolute;
+  top: 14px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(4, 17, 27, 0.82);
+  color: rgba(239, 247, 249, 0.92);
+  font: 700 11px/1.4 var(--font-mono);
+  letter-spacing: 1.2px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+#s2-compare-split-line span.before {
+  right: 8px;
+}
+
+#s2-compare-split-line span.after {
+  left: 8px;
+}
+
+#s2-compare-split-line .s2-compare-split-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(180, 215, 222, 0.72);
+  border-radius: 50%;
+  outline: 0;
+  color: rgba(239, 247, 249, 0.96);
+  background: rgba(4, 17, 27, 0.96);
+  box-shadow:
+    0 0 0 5px rgba(62, 112, 125, 0.3),
+    0 0 13px rgba(94, 216, 239, 0.3);
+  font: 700 14px/1 var(--font-mono);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: ew-resize;
+}
+
+#s2-compare-split-line .s2-compare-split-handle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+
 .map-stack-chip {
   display: inline-flex;
   align-items: baseline;
