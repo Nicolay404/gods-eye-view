@@ -31,13 +31,17 @@ export function createEarthquakeOverlayEntry({
   position,
   magnitude,
   accent,
+  year = null,
 }) {
   const mag = Number(magnitude);
   return {
     id: String(id),
     position,
     variant: 'label',
-    title: `M${mag.toFixed(1)}`,
+    // History labels carry the year: an M7 is news today and context in 1942.
+    title: Number.isFinite(year)
+      ? `M${mag.toFixed(1)} · ${year}`
+      : `M${mag.toFixed(1)}`,
     accent,
     priority: Math.round(mag * 1000),
     collisionGroup: 'ambient-label',

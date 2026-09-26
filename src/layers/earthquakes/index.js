@@ -10,9 +10,28 @@ import {
 } from './model.js';
 export * from './model.js';
 export { createUsgsEarthquakeSource } from './source.js';
+export { createUsgsEarthquakeHistorySource } from './historySource.js';
+import { eventYear } from './history.js';
 
-/** Own one earthquake display and its refresh lifecycle. */
-export function createEarthquakesLayer({ source, overlayHost } = {}) {
+/**
+ * Own one earthquake display and its refresh lifecycle.
+ *
+ * The live 24 h feed uses the defaults. The history display passes its own
+ * identity plus `viewQuery(viewer)`: a query derived from what the camera sees,
+ * fetched only when it changes (a `key` the source answered before is reused).
+ */
+export function createEarthquakesLayer({
+  source,
+  overlayHost,
+  id = 'earthquakes',
+  name = 'Earthquakes (24h)',
+  sourceLabel = 'USGS',
+  overlaySourceId = EARTHQUAKE_OVERLAY_SOURCE_ID,
+  updateInterval = 60000,
+  viewQuery = null,
+  showYear = false,
+  fillAlpha = { significant: 0.4, other: 0.3 },
+} = {}) {
   if (typeof source?.getSnapshot !== 'function')
     throw new TypeError('Earthquakes require a snapshot source');
   if (!overlayHost) throw new TypeError('Earthquakes require an overlay host');
@@ -23,25 +42,28 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
   let _lastUpdate = null;
   let _lastError = null;
   let _enabled = false;
+  let _shownKey = null;
+  let _pendingKey = null;
+  let _failed = null; // { key, at }: a failing view is retried after a minute
 
   const layer = {
-    id: 'earthquakes',
-    name: 'Earthquakes (24h)',
+    id,
+    name,
     icon: '🌋',
-    source: 'USGS',
-    updateInterval: 60000,
+    source: sourceLabel,
+    updateInterval,
 
     init(viewer) {
       if (_viewer) throw new Error('Earthquake layer is already initialized');
       _viewer = viewer;
-      _dataSource = new Cesium.CustomDataSource('earthquakes');
+      _dataSource = new Cesium.CustomDataSource(id);
       _dataSource.show = false;
       viewer.dataSources.add(_dataSource);
       _count = 0;
       _lastUpdate = null;
       _lastError = null;
       _enabled = false;
-      overlayHost.setVisible(EARTHQUAKE_OVERLAY_SOURCE_ID, false);
+      overlayHost.setVisible(overlaySourceId, false);
       console.log('[Data:Earthquakes] Initialized');
     },
 
@@ -50,25 +72,39 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
       // No continuous-render hold: the discs are static geometry now, so the
       // layer has no per-frame animator to keep the render loop alive for.
       if (_dataSource) _dataSource.show = true;
-      overlayHost.setVisible(EARTHQUAKE_OVERLAY_SOURCE_ID, true);
+      overlayHost.setVisible(overlaySourceId, true);
     },
 
     disable(viewer) {
       _request?.abort();
       _request = null;
       _enabled = false;
+      _shownKey = null;
+      _pendingKey = null;
+      _failed = null;
       if (_dataSource) _dataSource.show = false;
-      overlayHost.clearSource(EARTHQUAKE_OVERLAY_SOURCE_ID);
-      overlayHost.setVisible(EARTHQUAKE_OVERLAY_SOURCE_ID, false);
+      overlayHost.clearSource(overlaySourceId);
+      overlayHost.setVisible(overlaySourceId, false);
     },
 
     async update(viewer) {
       if (!_enabled || !_dataSource) return false;
+      const query = viewQuery ? viewQuery(viewer ?? _viewer) : null;
+      if (viewQuery) {
+        if (!query || query.key === _shownKey || query.key === _pendingKey)
+          return false;
+        if (query.key === _failed?.key && Date.now() - _failed.at < 60000)
+          return false;
+      }
       _request?.abort();
       const request = new AbortController();
       _request = request;
+      _pendingKey = query?.key ?? null;
       try {
-        const rows = await source.getSnapshot({ signal: request.signal });
+        const rows = await source.getSnapshot({
+          signal: request.signal,
+          ...(query ? { query } : {}),
+        });
         if (request.signal.aborted || _request !== request || !_enabled)
           return false;
 
@@ -90,13 +126,13 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
           const baseRadius = Math.pow(2, mag) * 1000;
           const color = depthColor(depthKm || 0);
           const isSignificant = mag >= 5.0;
-          const fillAlpha = isSignificant ? 0.4 : 0.3;
+          const fill = isSignificant ? fillAlpha.significant : fillAlpha.other;
           const outlineAlpha = isSignificant ? 1.0 : 0.8;
 
           const position = Cesium.Cartesian3.fromDegrees(lon, lat);
           nextEntities.push(
             new Cesium.Entity({
-              id: `earthquake:${stableId}`,
+              id: `${id === 'earthquakes' ? 'earthquake' : id}:${stableId}`,
               position,
               ellipse: {
                 // Static axes — see the module header. A CallbackProperty here
@@ -104,7 +140,7 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
                 semiMajorAxis: baseRadius,
                 semiMinorAxis: baseRadius,
                 material: new Cesium.ColorMaterialProperty(
-                  color.withAlpha(fillAlpha),
+                  color.withAlpha(fill),
                 ),
                 outline: true,
                 outlineColor: color.withAlpha(outlineAlpha),
@@ -127,6 +163,7 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
               position,
               magnitude: mag,
               accent: color.toCssColorString(),
+              year: showYear ? eventYear(time) : null,
             }),
           );
         }
@@ -135,7 +172,7 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
         for (const entity of nextEntities) _dataSource.entities.add(entity);
         if (_enabled) {
           overlayHost.setEntries(
-            EARTHQUAKE_OVERLAY_SOURCE_ID,
+            overlaySourceId,
             selectEarthquakeOverlayCohort(overlayEntries),
             {
               cohortLimit: EARTHQUAKE_OVERLAY_COHORT_LIMIT,
@@ -148,16 +185,25 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
         _count = count;
         _lastUpdate = Date.now();
         _lastError = null;
-        console.log(`[Data:Earthquakes] Updated: ${_count} events (M2.5+)`);
+        _shownKey = query?.key ?? null;
+        console.log(
+          query
+            ? `[Data:Earthquakes] ${id}: ${_count} events M${query.minMagnitude}+ since 1900`
+            : `[Data:Earthquakes] Updated: ${_count} events (M2.5+)`,
+        );
         return true;
       } catch (e) {
         if (request.signal.aborted || _request !== request || !_enabled)
           return false;
         console.warn('[Data:Earthquakes] Fetch error:', e);
+        if (query) _failed = { key: query.key, at: Date.now() };
         _lastError = e?.message || 'Earthquake source unavailable';
         return false;
       } finally {
-        if (_request === request) _request = null;
+        if (_request === request) {
+          _request = null;
+          _pendingKey = null;
+        }
       }
     },
 
@@ -166,8 +212,8 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
       _request = null;
       _viewer = null;
       _enabled = false;
-      overlayHost.clearSource(EARTHQUAKE_OVERLAY_SOURCE_ID);
-      overlayHost.setVisible(EARTHQUAKE_OVERLAY_SOURCE_ID, false);
+      overlayHost.clearSource(overlaySourceId);
+      overlayHost.setVisible(overlaySourceId, false);
       if (_dataSource) {
         viewer.dataSources.remove(_dataSource, true);
         _dataSource = null;
@@ -175,6 +221,7 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
       _count = 0;
       _lastUpdate = null;
       _lastError = null;
+      _shownKey = null;
     },
 
     /**

@@ -75,7 +75,7 @@ export const DATA_CREDITS = [
   },
   {
     key: 'usgs',
-    html: 'Earthquakes: Data courtesy of the U.S. Geological Survey',
+    html: 'Earthquakes and earthquake history (ComCat): Data courtesy of the U.S. Geological Survey',
   },
   {
     key: 'nasa-gibs',
