@@ -777,33 +777,28 @@
   cursor: default;
 }
 
-/* Sentinel-2 time tools: PLAY and COMPARE under the year stepper. */
-.s2-compare {
+.map-scene-view {
   grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.s2-compare[hidden],
-.s2-compare [hidden] {
-  display: none !important;
-}
-
-.s2-compare-row {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
 }
 
-.s2-compare-btn,
-.s2-compare-mode,
-.s2-compare-step {
-  padding: 4px 8px;
+.map-scene-view-label {
+  flex: 0 0 auto;
+  margin-right: 4px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 1.35px;
+  color: rgba(190, 221, 230, 0.62);
+}
+
+.map-scene-view-btn {
+  flex: 1 1 0;
+  padding: 4px 7px;
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   color: var(--text-dim);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -811,51 +806,137 @@
   cursor: pointer;
 }
 
-.s2-compare-btn {
-  flex: 1 1 0;
-}
-
-.s2-compare-btn:hover,
-.s2-compare-mode:hover,
-.s2-compare-step:hover,
-.s2-compare-btn:focus-visible,
-.s2-compare-mode:focus-visible,
-.s2-compare-step:focus-visible {
+.map-scene-view-btn:hover,
+.map-scene-view-btn:focus-visible {
   color: var(--text-primary);
   border-color: var(--glass-border-hover);
 }
 
-.s2-compare-btn[aria-pressed='true'],
-.s2-compare-mode.active {
+.map-scene-view-btn.active {
   color: var(--accent);
   border-color: var(--accent);
   background: var(--accent-dim);
 }
 
-.s2-compare-a {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+/* Sentinel-2 timeline: floating bar under the top toolbar while a
+   Sentinel-2 year is the basemap. */
+#s2-timeline {
+  position: fixed;
+  top: 104px;
+  left: 50%;
+  z-index: 120;
+  width: min(560px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  color: var(--text-dim);
+  background: rgba(4, 17, 27, 0.86);
+  border: 1px solid var(--accent-dim);
+  border-radius: 6px;
+  box-shadow: 0 0 18px rgba(0, 212, 255, 0.12);
+  backdrop-filter: blur(6px);
+}
+
+#s2-timeline[hidden],
+#s2-timeline [hidden] {
+  display: none !important;
+}
+
+.s2-tl-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.s2-tl-title {
+  flex: 1 1 auto;
+  font-size: 9px;
+  letter-spacing: 1.6px;
   color: var(--accent);
 }
 
-.s2-compare-tag {
-  color: var(--text-dim);
+.s2-tl-modes {
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.s2-tl-mode,
+.s2-tl-btn {
+  padding: 4px 9px;
+  font-family: var(--font-mono);
   font-size: 9px;
-}
-
-.s2-compare-step {
-  padding: 2px 6px;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.03);
   border: 0;
-  background: transparent;
+  cursor: pointer;
 }
 
-.s2-compare-fade {
-  flex: 1 1 80px;
-  min-width: 80px;
+.s2-tl-btn {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.s2-tl-mode + .s2-tl-mode {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.s2-tl-mode:hover,
+.s2-tl-btn:hover,
+.s2-tl-mode:focus-visible,
+.s2-tl-btn:focus-visible {
+  color: var(--text-primary);
+}
+
+.s2-tl-mode.active,
+.s2-tl-btn[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.s2-tl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.s2-tl-track {
+  display: grid;
+  grid-template-columns: 58px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+}
+
+.s2-tl-tag {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.s2-tl-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: right;
+}
+
+.s2-tl-range {
+  width: 100%;
   accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.s2-tl-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin: -2px 52px 0 66px;
+  font-size: 8px;
+  color: rgba(232, 234, 237, 0.4);
 }
 
 /* Divider between year A (left) and the basemap year B (right). */

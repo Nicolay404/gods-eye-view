@@ -545,6 +545,19 @@ export class ShareLinkManager {
     const camera = this.viewer.camera;
     const carto = camera.positionCartographic;
     if (!carto) return null;
+    // Mid-morph between the 3D globe and the 2D map the camera has no
+    // settled orientation; skip this write, the next camera change lands one.
+    if (
+      ![
+        carto.latitude,
+        carto.longitude,
+        carto.height,
+        camera.heading,
+        camera.pitch,
+        camera.roll,
+      ].every(Number.isFinite)
+    )
+      return null;
 
     const params = new URLSearchParams();
     params.set('v', '2');

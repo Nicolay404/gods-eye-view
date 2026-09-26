@@ -1,5 +1,5 @@
-// SENTINEL-2 TIME TOOLS in the map source tray: PLAY steps the basemap year by
-// year, COMPARE opens a before/after session, both only on Sentinel-2.
+// SENTINEL-2 TIMELINE: the floating bar that plays the years, moves the map
+// year, and switches CURRENT / OVERLAY / COMPARE, only on Sentinel-2.
 //
 // Run with: npm test
 import test from 'node:test';
@@ -76,7 +76,10 @@ function makeElement(tagName = 'div') {
 
 function fixture(activeId) {
   const container = makeElement();
-  container.ownerDocument = { createElement: (tag) => makeElement(tag) };
+  const doc = { createElement: (tag) => makeElement(tag) };
+  container.ownerDocument = doc;
+  const timelineParent = makeElement();
+  timelineParent.ownerDocument = doc;
   const sources = [
     { id: 'osm', label: 'OSM' },
     { id: 's2-cloudless-2024', label: 'Sentinel-2 2024' },
@@ -84,7 +87,7 @@ function fixture(activeId) {
   let state = { activeId, status: 'ready' };
   const selected = [];
   const timers = [];
-  const toggles = [];
+  const calls = [];
   const controller = {
     getStacks: () => sources,
     getActiveId: () => state.activeId,
@@ -95,22 +98,34 @@ function fixture(activeId) {
       return controller.getState();
     },
   };
-  const comparisonState = { active: false, available: true, mode: 'swipe' };
+  const comparison = { active: false, mode: 'swipe', yearA: 2017, fade: 0.5 };
   const controls = createMapSourceControls({
     container,
     controller,
+    timelineParent,
     subscribe: () => () => {},
     createComparison: () => ({
       getState: () => ({
-        ...comparisonState,
+        ...comparison,
         available: /^s2-cloudless-/.test(state.activeId),
+        yearB: Number(state.activeId.split('-').at(-1)) || null,
       }),
-      toggle() {
-        toggles.push('toggle');
-        comparisonState.active = !comparisonState.active;
+      start(options) {
+        calls.push(['start', options]);
+        comparison.active = true;
+        comparison.mode = options.mode;
       },
-      stepYearA() {},
-      setMode() {},
+      stop() {
+        calls.push(['stop']);
+        comparison.active = false;
+      },
+      setMode(mode) {
+        calls.push(['mode', mode]);
+        comparison.mode = mode;
+      },
+      setYearA(year) {
+        calls.push(['yearA', year]);
+      },
       setFade() {},
       destroy() {},
     }),
@@ -122,28 +137,34 @@ function fixture(activeId) {
       timers[id].cleared = true;
     },
   });
-  const panel = () =>
-    container.children.find((child) => child.dataset.role === 's2-compare');
-  const buttons = () => panel().children[0].children;
-  return { controls, selected, timers, toggles, panel, buttons };
+  const bar = () =>
+    timelineParent.children.find(
+      (child) => child.dataset.role === 's2-timeline',
+    );
+  const head = () => bar().children[0];
+  const mode = (name) =>
+    head().children[1].children.find((node) => node.dataset.mode === name);
+  const play = () => head().children[2];
+  const tracks = () => bar().children[1].children;
+  return { controls, selected, timers, calls, bar, mode, play, tracks };
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-test('the time tools stay hidden off Sentinel-2', () => {
+test('the timeline floats outside the tray and hides off Sentinel-2', () => {
   const f = fixture('osm');
-  assert.equal(f.panel().hidden, true);
+  assert.ok(f.bar(), 'mounted in the timeline parent');
+  assert.equal(f.bar().hidden, true);
 });
 
 test('PLAY from the last year restarts at 2017, steps each year, and stops at the end', async () => {
   const f = fixture('s2-cloudless-2024');
-  assert.equal(f.panel().hidden, false);
-  const [play] = f.buttons();
-  play.click();
+  assert.equal(f.bar().hidden, false);
+  f.play().click();
   await tick();
   assert.deepEqual(f.selected, ['s2-cloudless-2017']);
   assert.equal(f.timers[0].ms, S2_PLAY_STEP_MS);
-  assert.equal(play.textContent, '■ STOP');
+  assert.equal(f.play().textContent, '■ STOP');
   for (let i = 0; i < 8; i++) {
     f.timers[0].fn();
     await tick();
@@ -151,12 +172,34 @@ test('PLAY from the last year restarts at 2017, steps each year, and stops at th
   assert.equal(f.selected.at(-1), 's2-cloudless-2024');
   assert.equal(f.selected.length, 8, 'one select per year, none past 2024');
   assert.equal(f.timers[0].cleared, true);
-  assert.equal(play.textContent, '▶ PLAY');
+  assert.equal(f.play().textContent, '▶ PLAY');
 });
 
-test('COMPARE toggles the comparison session', () => {
+test('CURRENT, OVERLAY and COMPARE drive the comparison session', () => {
   const f = fixture('s2-cloudless-2021');
-  const [, compare] = f.buttons();
-  compare.click();
-  assert.deepEqual(f.toggles, ['toggle']);
+  assert.ok(f.mode('current').classList.contains('active'));
+  f.mode('overlay').click();
+  assert.deepEqual(f.calls.at(-1), ['start', { mode: 'fade' }]);
+  assert.ok(f.mode('overlay').classList.contains('active'));
+  f.mode('compare').click();
+  assert.deepEqual(f.calls.at(-1), ['mode', 'swipe']);
+  assert.ok(f.mode('compare').classList.contains('active'));
+  f.mode('current').click();
+  assert.deepEqual(f.calls.at(-1), ['stop']);
+});
+
+test('releasing the MAP slider switches the basemap once; VS sets year A', async () => {
+  const f = fixture('s2-cloudless-2024');
+  const [mapTrack, vsTrack] = f.tracks();
+  const mapSlider = mapTrack.children[1];
+  mapSlider.value = '2019';
+  for (const handler of mapSlider.listeners.input || []) handler();
+  assert.deepEqual(f.selected, [], 'dragging does not switch');
+  for (const handler of mapSlider.listeners.change || []) handler();
+  await tick();
+  assert.deepEqual(f.selected, ['s2-cloudless-2019']);
+  const vsSlider = vsTrack.children[1];
+  vsSlider.value = '2018';
+  for (const handler of vsSlider.listeners.change || []) handler();
+  assert.deepEqual(f.calls.at(-1), ['yearA', 2018]);
 });

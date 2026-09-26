@@ -743,3 +743,11 @@ test('visual input listeners are revoked before asynchronous UI teardown', () =>
   assert.match(VisualSettings.prototype.stop.toString(), /this\._styleParameters\?\.destroy\(\)/);
   assert.match(VisualSettings.prototype.stop.toString(), /this\._visualEffects\.stop\(\)/);
 });
+
+test('a camera mid-morph between 3D and 2D writes no share link instead of throwing', () => {
+  const manager = makeManager();
+  manager.viewer.camera.heading = undefined;
+  assert.equal(manager._buildHashParams(), null);
+  manager.viewer.camera.heading = 0;
+  assert.ok(manager._buildHashParams() instanceof URLSearchParams);
+});

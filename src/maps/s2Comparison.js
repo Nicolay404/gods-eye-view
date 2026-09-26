@@ -181,8 +181,9 @@ export function createS2Comparison({
     emit();
   }
 
-  function start({ year } = {}) {
+  function start({ year, mode: startMode } = {}) {
     if (active) return state();
+    if (S2_COMPARE_MODES.includes(startMode)) mode = startMode;
     const b = yearB();
     if (b == null)
       throw new Error('Choose the Sentinel-2 basemap before comparing years');
