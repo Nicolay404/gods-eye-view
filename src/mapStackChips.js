@@ -11,6 +11,12 @@
 // or superseded switch still leaves the truly-active stack lit.
 
 import { keySetupRequirement } from './keySetupCore.mjs';
+import {
+  S2_CLOUDLESS_LATEST_YEAR,
+  S2_CLOUDLESS_YEARS,
+  s2CloudlessStackId,
+  s2CloudlessYearOf,
+} from './maps/catalog.js';
 
 export const MAP_STACK_CHIP_CLASS = 'map-stack-chip';
 export const PRESENTED_MAP_STACK_IDS = Object.freeze([
@@ -18,9 +24,39 @@ export const PRESENTED_MAP_STACK_IDS = Object.freeze([
   'bing-aerial',
   'bing-labels',
   'esri-imagery',
-  's2-cloudless-2024',
+  // One chip stands for the whole annual Sentinel-2 series; the year stepper
+  // rendered after the chips moves between the years.
+  s2CloudlessStackId(S2_CLOUDLESS_LATEST_YEAR),
   'osm',
 ]);
+
+export const MAP_STACK_YEARS_CLASS = 'map-stack-years';
+
+/**
+ * Two stack ids light the same chip when they are years of one series.
+ * @param {string} chipId
+ * @param {string|null} activeId
+ * @returns {boolean}
+ */
+function chipOwnsStack(chipId, activeId) {
+  if (!chipId || !activeId) return false;
+  if (chipId === activeId) return true;
+  return (
+    s2CloudlessYearOf(chipId) != null && s2CloudlessYearOf(activeId) != null
+  );
+}
+
+/**
+ * The year a stepper press moves to, or null at either end of the series.
+ * @param {string|null} activeId
+ * @param {-1|1} step
+ * @returns {number|null}
+ */
+export function steppedS2CloudlessYear(activeId, step) {
+  const index = S2_CLOUDLESS_YEARS.indexOf(s2CloudlessYearOf(activeId));
+  if (index < 0) return null;
+  return S2_CLOUDLESS_YEARS[index + step] ?? null;
+}
 
 /**
  * Presentation model for one map-stack chip.
@@ -36,7 +72,10 @@ export const PRESENTED_MAP_STACK_IDS = Object.freeze([
  */
 export function mapStackChipModel(stack, activeId) {
   const available = stack?.available !== false;
-  const label = String(stack?.label ?? stack?.id ?? '');
+  const label =
+    s2CloudlessYearOf(stack?.id) != null
+      ? 'Sentinel-2'
+      : String(stack?.label ?? stack?.id ?? '');
   const requiresIon = stack?.requiresIon === true;
   const fallbackReason = requiresIon
     ? keySetupRequirement('cesium-ion')
@@ -48,7 +87,7 @@ export function mapStackChipModel(stack, activeId) {
     id: String(stack?.id ?? ''),
     label,
     available,
-    active: !!stack?.id && stack.id === activeId,
+    active: chipOwnsStack(stack?.id, activeId),
     requiresIon,
     // Dropdown parity: unavailable options read "<label> · ion key". A chip has
     // no room for that, so an ion-backed stack gets a compact badge; every
@@ -143,7 +182,66 @@ export function renderMapStackChips(
     container.appendChild(chip);
   }
 
+  if (models.some(({ id }) => s2CloudlessYearOf(id) != null)) {
+    container.appendChild(
+      renderYearStepper(ownerDoc, container, { activeId, onSelect, bind }),
+    );
+  }
+
   return models;
+}
+
+/**
+ * ◀ YEAR ▶ for the Sentinel-2 series. The buttons read the active stack from
+ * the row at click time, so a switch that landed (or failed) since the last
+ * render steps from the truly active year, never from a stale closure.
+ */
+function renderYearStepper(ownerDoc, container, { activeId, onSelect, bind }) {
+  const stepper = ownerDoc.createElement('div');
+  stepper.className = MAP_STACK_YEARS_CLASS;
+  stepper.dataset.role = 's2-years';
+  stepper.setAttribute('role', 'group');
+  stepper.setAttribute('aria-label', 'Sentinel-2 mosaic year');
+  const button = (step, text, name) => {
+    const element = ownerDoc.createElement('button');
+    element.type = 'button';
+    element.className = 'map-stack-year-step';
+    element.dataset.step = String(step);
+    element.textContent = text;
+    element.setAttribute('aria-label', name);
+    bind(element, 'click', () => {
+      const year = steppedS2CloudlessYear(
+        container.dataset.activeStackId,
+        step,
+      );
+      if (year != null) onSelect?.(s2CloudlessStackId(year));
+    });
+    return element;
+  };
+  const year = ownerDoc.createElement('span');
+  year.className = 'map-stack-year';
+  year.dataset.role = 's2-year';
+  stepper.appendChild(button(-1, '◀', 'Previous year'));
+  stepper.appendChild(year);
+  stepper.appendChild(button(1, '▶', 'Next year'));
+  syncYearStepper(stepper, activeId);
+  container.dataset.activeStackId = activeId || '';
+  return stepper;
+}
+
+function syncYearStepper(stepper, activeId) {
+  const year = s2CloudlessYearOf(activeId);
+  stepper.hidden = year == null;
+  for (const child of stepper.children) {
+    if (child.dataset?.role === 's2-year')
+      child.textContent = year == null ? '' : String(year);
+    if (child.dataset?.step) {
+      const blocked =
+        steppedS2CloudlessYear(activeId, Number(child.dataset.step)) == null;
+      child.disabled = blocked;
+      child.setAttribute?.('aria-disabled', String(blocked));
+    }
+  }
 }
 
 /**
@@ -156,10 +254,15 @@ export function renderMapStackChips(
 export function syncMapStackChips(container, activeId) {
   const chips = container?.children;
   if (!chips) return;
+  if (container.dataset) container.dataset.activeStackId = activeId || '';
   for (const chip of Array.from(chips)) {
+    if (chip?.dataset?.role === 's2-years') {
+      syncYearStepper(chip, activeId);
+      continue;
+    }
     const stackId = chip?.dataset?.stackId;
     if (!stackId) continue;
-    const active = stackId === activeId;
+    const active = chipOwnsStack(stackId, activeId);
     chip.classList?.toggle('active', active);
     chip.setAttribute?.('aria-pressed', String(active));
   }

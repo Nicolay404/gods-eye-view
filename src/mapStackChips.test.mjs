@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs';
 import {
   MAP_STACK_CHIP_CLASS,
   PRESENTED_MAP_STACK_IDS,
+  steppedS2CloudlessYear,
   mapStackChipModel,
   mapStackChipModels,
   renderMapStackChips,
@@ -82,6 +83,12 @@ const doc = { createElement: (tagName) => makeElement(tagName) };
 const chipText = (chip) =>
   chip.children.map((child) => child.textContent).join(' ');
 
+/** The stack chips of a row, without the Sentinel-2 year stepper. */
+const chipsOf = (container) =>
+  container.children.filter((child) => child.dataset.stackId);
+const stepperOf = (container) =>
+  container.children.find((child) => child.dataset.role === 's2-years');
+
 // Shaped exactly like MapStackController.getStacks() output.
 const CONTROLLER_STACKS = [
   {
@@ -136,7 +143,7 @@ test('the row renders exactly the six owner-approved sources', () => {
   });
 
   assert.deepEqual(
-    container.children.map((chip) => chip.dataset.stackId),
+    chipsOf(container).map((chip) => chip.dataset.stackId),
     [
       'photoreal',
       'bing-aerial',
@@ -146,12 +153,12 @@ test('the row renders exactly the six owner-approved sources', () => {
       'osm',
     ],
   );
-  assert.deepEqual(container.children.map(chipText), [
+  assert.deepEqual(chipsOf(container).map(chipText), [
     'Google 3D',
     'Bing Aerial',
     'Bing Labels',
     'Esri Satellite',
-    'Sentinel-2 2024',
+    'Sentinel-2',
     'OSM',
   ]);
   assert.deepEqual(PRESENTED_MAP_STACK_IDS, [
@@ -163,12 +170,12 @@ test('the row renders exactly the six owner-approved sources', () => {
     'osm',
   ]);
   assert.ok(
-    container.children.every(
+    chipsOf(container).every(
       (chip) => chip.tagName === 'button' && chip.type === 'button',
     ),
   );
   assert.ok(
-    container.children.every((chip) =>
+    chipsOf(container).every((chip) =>
       chip.classList.contains(MAP_STACK_CHIP_CLASS),
     ),
   );
@@ -184,8 +191,8 @@ test('internal and future stacks stay outside the approved presentation set', ()
   ];
   renderMapStackChips(container, withHybrid, { activeId: 'photoreal', doc });
 
-  assert.equal(container.children.length, 6);
-  assert.doesNotMatch(container.children.map(chipText).join(' '), /Hybrid/);
+  assert.equal(chipsOf(container).length, 6);
+  assert.doesNotMatch(chipsOf(container).map(chipText).join(' '), /Hybrid/);
 });
 
 test('re-rendering replaces the previous chips instead of stacking a second row', () => {
@@ -196,7 +203,54 @@ test('re-rendering replaces the previous chips instead of stacking a second row'
   });
   renderMapStackChips(container, CONTROLLER_STACKS, { activeId: 'osm', doc });
 
-  assert.equal(container.children.length, PRESENTED_MAP_STACK_IDS.length);
+  assert.equal(chipsOf(container).length, PRESENTED_MAP_STACK_IDS.length);
+  assert.equal(
+    container.children.filter((child) => child.dataset.role === 's2-years')
+      .length,
+    1,
+  );
+});
+
+test('the year stepper hides off Sentinel-2 and lights the one chip for any year', () => {
+  const container = makeElement();
+  renderMapStackChips(container, CONTROLLER_STACKS, { activeId: 'osm', doc });
+  assert.equal(stepperOf(container).hidden, true);
+
+  syncMapStackChips(container, 's2-cloudless-2019');
+  const stepper = stepperOf(container);
+  assert.equal(stepper.hidden, false);
+  assert.equal(
+    stepper.children.find((child) => child.dataset.role === 's2-year')
+      .textContent,
+    '2019',
+  );
+  const s2 = chipsOf(container).find(
+    (chip) => chip.dataset.stackId === 's2-cloudless-2024',
+  );
+  assert.ok(s2.classList.contains('active'));
+  assert.equal(s2.getAttribute('aria-pressed'), 'true');
+});
+
+test('stepping moves one year from the ACTIVE year and stops at both ends', () => {
+  const container = makeElement();
+  const selected = [];
+  renderMapStackChips(container, CONTROLLER_STACKS, {
+    activeId: 's2-cloudless-2024',
+    onSelect: (id) => selected.push(id),
+    doc,
+  });
+  const [previous, , next] = stepperOf(container).children;
+  assert.equal(next.disabled, true, 'no year after the newest mosaic');
+  next.click();
+  previous.click();
+  // A switch landed elsewhere since render: the stepper follows controller state.
+  syncMapStackChips(container, 's2-cloudless-2017');
+  assert.equal(previous.disabled, true, 'no year before the first mosaic');
+  previous.click();
+  next.click();
+  assert.deepEqual(selected, ['s2-cloudless-2023', 's2-cloudless-2018']);
+  assert.equal(steppedS2CloudlessYear('osm', 1), null);
+  assert.equal(steppedS2CloudlessYear('s2-cloudless-2020', -1), 2019);
 });
 
 test('clicking a chip dispatches that stack id — the same selection the dropdown made', () => {

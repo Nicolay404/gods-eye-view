@@ -7,7 +7,7 @@ import {
   createIonImagery,
   createS2CloudlessImagery,
   ESRI_ATTRIBUTION_HTML,
-  S2_CLOUDLESS_ATTRIBUTION_HTML,
+  s2CloudlessAttributionHtml,
 } from './imagery.js';
 import { createWorldTerrain, createKeylessTerrain } from './terrain.js';
 
@@ -52,7 +52,7 @@ export function createDefaultMapSources({
           : descriptor.id === 'osm'
             ? createOsmImagery
             : descriptor.kind === 's2-cloudless'
-              ? createS2CloudlessImagery
+              ? () => createS2CloudlessImagery(descriptor.year)
               : createEsriImagery;
       return {
         ...common,
@@ -74,7 +74,7 @@ export function createDefaultMapSources({
           : {}),
         ...(descriptor.kind === 's2-cloudless'
           ? {
-              credit: S2_CLOUDLESS_ATTRIBUTION_HTML,
+              credit: s2CloudlessAttributionHtml(descriptor.year),
               constructionFallback: {
                 id: 'esri-imagery',
                 message: 'Sentinel-2 imagery is unavailable; using Esri',

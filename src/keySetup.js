@@ -51,10 +51,10 @@ export function stripKeylessBasemapFromHash(hash) {
   if (!hash) return null;
   try {
     const params = new URLSearchParams(hash);
-    if (
-      !['osm', 'esri-imagery', 's2-cloudless-2024'].includes(params.get('map'))
-    )
-      return null;
+    const map = params.get('map') || '';
+    const keyless =
+      ['osm', 'esri-imagery'].includes(map) || /^s2-cloudless-\d{4}$/.test(map);
+    if (!keyless) return null;
     params.delete('map');
     return params.toString();
   } catch {

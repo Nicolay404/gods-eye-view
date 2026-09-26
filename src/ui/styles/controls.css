@@ -735,8 +735,46 @@
 
 .map-stack-chip-row {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
+}
+
+.map-stack-years {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--accent);
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+}
+
+.map-stack-years[hidden] {
+  display: none;
+}
+
+.map-stack-year-step {
+  padding: 2px 8px;
+  font: inherit;
+  color: var(--text-dim);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.map-stack-year-step:hover:not(:disabled),
+.map-stack-year-step:focus-visible {
+  color: var(--text-primary);
+}
+
+.map-stack-year-step:disabled {
+  color: rgba(232, 234, 237, 0.2);
+  cursor: default;
 }
 
 .map-stack-chip {

@@ -27,9 +27,10 @@ test('the complete Realtime tool payload pins the additive analyst, satellite, L
     .digest('hex');
   assert.equal(
     digest,
-    // Re-derived for the additive `s2-cloudless-2024` set_map_stack value;
-    // without it the payload hashes to the previous pin (590d537d…510a3b).
-    '4f14211cd358092cdd8c9e11a4d822a3ef18107c327fa2f9d3b45c0080bd2e8b',
+    // Re-derived for the additive `s2-cloudless-2017`…`s2-cloudless-2024`
+    // set_map_stack values; without them the payload hashes to the previous
+    // pin (590d537d…510a3b).
+    '011f3d97f2d514234325e74d16b4f07181c554a2f187f16f7daddc9485489f6c',
   );
 });
 
@@ -112,10 +113,10 @@ test('all legacy action arguments are byte-identical after removing the delibera
         value.enum = value.enum.filter((key) => key !== 'fire-perimeters');
     }
   }
-  // The Sentinel-2 cloudless basemap is an additive set_map_stack value.
+  // The Sentinel-2 cloudless annual series is additive set_map_stack values.
   const stacks = legacy.find((tool) => tool.name === 'set_map_stack').parameters
     .properties.stack;
-  stacks.enum = stacks.enum.filter((id) => id !== 's2-cloudless-2024');
+  stacks.enum = stacks.enum.filter((id) => !id.startsWith('s2-cloudless-'));
   // Independently derived by executing trusted c9f9896 actionSchemas in the restricted container.
   const hud = legacy.find((tool) => tool.name === 'set_hud').parameters
     .properties.layout;

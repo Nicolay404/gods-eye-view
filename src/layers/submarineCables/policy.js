@@ -1,4 +1,5 @@
 import * as Cesium from 'cesium';
+import { S2_CLOUDLESS_STACK_IDS } from '../../maps/catalog.js';
 
 export const BASE_CABLE_COLOR = '#39d5ff';
 
@@ -82,7 +83,7 @@ export const CABLE_GLOBE_STACK_IDS = Object.freeze(
     'bing-aerial',
     'bing-labels',
     'esri-imagery',
-    's2-cloudless-2024',
+    ...S2_CLOUDLESS_STACK_IDS,
     'osm',
   ]),
 );
