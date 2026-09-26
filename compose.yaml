@@ -1,0 +1,38 @@
+services:
+  gev:
+    build:
+      context: .
+      target: ${GEV_TARGET:-dev}   # dev | prod
+    image: gods-eye-view:${GEV_TARGET:-dev}
+    container_name: gods-eye-view
+    # SOLO localhost del host: si pones "4173:4173" cualquiera en tu red
+    # (la de la U, la de CoopMego) usa tus API keys a través del proxy.
+    ports:
+      - "127.0.0.1:4173:4173"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOST: 0.0.0.0
+      PORT: "4173"
+      # Throttles por IP como defensa extra (ver .env.example)
+      GEV_RATELIMIT_OPENAI_PER_MIN: ${GEV_RATELIMIT_OPENAI_PER_MIN:-20}
+      GEV_RATELIMIT_GOOGLE_PER_MIN: ${GEV_RATELIMIT_GOOGLE_PER_MIN:-120}
+    volumes:
+      # Cache en disco (TLEs, terreno, FIRMS, presupuesto TomTom) persistente
+      - gev-cache:/app/.gev-cache
+    restart: unless-stopped
+    develop:
+      # `docker compose watch` sincroniza cambios del código en modo dev
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+        - action: sync+restart
+          path: ./server
+          target: /app/server
+        - action: rebuild
+          path: package-lock.json
+
+volumes:
+  gev-cache:
