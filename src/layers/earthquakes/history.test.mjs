@@ -21,11 +21,11 @@ import { createEarthquakesLayer } from './index.js';
 const LOJA = { west: -80.2, south: -4.6, east: -78.9, north: -3.4 };
 
 test('the magnitude floor rises with the view so every scale stays readable', () => {
-  assert.equal(historyMinMagnitude(1), 3);
-  assert.equal(historyMinMagnitude(5), 4);
-  assert.equal(historyMinMagnitude(15), 5);
-  assert.equal(historyMinMagnitude(45), 5.5);
-  assert.equal(historyMinMagnitude(180), 6);
+  assert.equal(historyMinMagnitude(1), 3.5);
+  assert.equal(historyMinMagnitude(5), 4.5);
+  assert.equal(historyMinMagnitude(15), 5.5);
+  assert.equal(historyMinMagnitude(45), 6);
+  assert.equal(historyMinMagnitude(180), 6.5);
 });
 
 test('a province view snaps outward to a half-degree grid and keys its cache', () => {
@@ -37,7 +37,7 @@ test('a province view snaps outward to a half-degree grid and keys its cache', (
       maxLat: -3,
       minLon: -80.5,
       maxLon: -78.5,
-      minMagnitude: 3,
+      minMagnitude: 3.5,
       key: undefined,
     },
   );
@@ -56,7 +56,7 @@ test('no ground in view means the whole globe at the great-earthquake floor', ()
   assert.equal(query.maxLat, 90);
   assert.equal(query.minLon, -180);
   assert.equal(query.maxLon, 180);
-  assert.equal(query.minMagnitude, 6);
+  assert.equal(query.minMagnitude, 6.5);
 });
 
 test('a view across the antimeridian keeps its east edge past 180°', () => {
@@ -83,7 +83,7 @@ test('the FDSN request asks for the biggest earthquakes since 1900, capped', () 
   assert.ok(EARTHQUAKE_HISTORY_LIMIT < 20000, 'below the service cap');
   assert.equal(p.get('minlatitude'), '-5');
   assert.equal(p.get('maxlongitude'), '-78.5');
-  assert.equal(p.get('minmagnitude'), '3');
+  assert.equal(p.get('minmagnitude'), '3.5');
 });
 
 test('years come from USGS epoch ms, including events before 1970', () => {
@@ -204,4 +204,36 @@ test('a history refresh cannot publish after the layer is switched off', async (
   assert.equal(await pending, false);
   assert.equal(h.entries.length, 0);
   assert.equal(h.layer.getStats().count, 0);
+});
+
+test('only the largest events get a label when a label limit is set', async () => {
+  const entries = [];
+  const layer = createEarthquakesLayer({
+    source: {
+      getSnapshot: async () =>
+        Array.from({ length: 30 }, (_, i) => ({
+          ...QUAKE_1953,
+          stableId: `q${i}`,
+          usgsId: `q${i}`,
+          mag: 4 + i / 10,
+        })),
+    },
+    overlayHost: {
+      setEntries: (...args) => entries.push(args),
+      setVisible() {},
+      clearSource() {},
+    },
+    id: 'earthquake-history',
+    overlaySourceId: 'earthquake-history',
+    viewQuery: () => earthquakeHistoryQuery(LOJA),
+    showYear: true,
+    labelLimit: 20,
+  });
+  layer.init({ dataSources: { add() {}, remove() {} } });
+  layer.enable();
+  assert.equal(await layer.update(), true);
+  assert.equal(layer.getStats().count, 30, 'every event keeps its disc');
+  const cohort = entries.at(-1)[1];
+  assert.equal(cohort.length, 20);
+  assert.equal(cohort[0].title, 'M6.9 · 1953');
 });

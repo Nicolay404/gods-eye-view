@@ -11,16 +11,16 @@
 export const EARTHQUAKE_HISTORY_API =
   'https://earthquake.usgs.gov/fdsnws/event/1/query';
 export const EARTHQUAKE_HISTORY_START = '1900-01-01';
-/** Far below the service's 20 000-event cap, and a readable globe. */
-export const EARTHQUAKE_HISTORY_LIMIT = 1000;
+/** Far below the service's 20 000-event cap; more discs than this stop being readable. */
+export const EARTHQUAKE_HISTORY_LIMIT = 400;
 
 /** Magnitude floor for a view whose larger side spans `spanDeg` degrees. */
 export function historyMinMagnitude(spanDeg) {
-  if (spanDeg >= 90) return 6;
-  if (spanDeg >= 30) return 5.5;
-  if (spanDeg >= 10) return 5;
-  if (spanDeg >= 3) return 4;
-  return 3;
+  if (spanDeg >= 90) return 6.5;
+  if (spanDeg >= 30) return 6;
+  if (spanDeg >= 10) return 5.5;
+  if (spanDeg >= 3) return 4.5;
+  return 3.5;
 }
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));

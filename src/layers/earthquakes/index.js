@@ -32,6 +32,7 @@ export function createEarthquakesLayer({
   showYear = false,
   fillAlpha = { significant: 0.4, other: 0.3 },
   radiusScale = 1,
+  labelLimit = EARTHQUAKE_OVERLAY_COHORT_LIMIT,
 } = {}) {
   if (typeof source?.getSnapshot !== 'function')
     throw new TypeError('Earthquakes require a snapshot source');
@@ -176,7 +177,7 @@ export function createEarthquakesLayer({
         if (_enabled) {
           overlayHost.setEntries(
             overlaySourceId,
-            selectEarthquakeOverlayCohort(overlayEntries),
+            selectEarthquakeOverlayCohort(overlayEntries, labelLimit),
             {
               cohortLimit: EARTHQUAKE_OVERLAY_COHORT_LIMIT,
               collisionCapacity: EARTHQUAKE_OVERLAY_COLLISION_CAPACITY,
