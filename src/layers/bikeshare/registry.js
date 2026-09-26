@@ -23,6 +23,31 @@ function bcycleEntry({
     ...buildBcycleUrls(systemId),
   };
 }
+// Latin America. PBSC (publicbikesystem.net) runs the Tembici / Bike Itau
+// networks and most municipal systems in the region; every feed below was
+// listed in MobilityData's GBFS systems catalog and answered with live
+// stations when added. Salvador (BR) was left out: its feed stopped updating.
+function pbscEntry({
+  id,
+  city,
+  centerLat,
+  centerLon,
+  host,
+  provider,
+  loadRadiusKm = 60,
+}) {
+  const base = `https://${host}.publicbikesystem.net/customer/gbfs/v2/en`;
+  return {
+    id,
+    city,
+    centerLat,
+    centerLon,
+    loadRadiusKm,
+    provider,
+    stationInformationUrl: `${base}/station_information.json`,
+    stationStatusUrl: `${base}/station_status.json`,
+  };
+}
 const RAW_GBFS_CITY_REGISTRY = [
   {
     id: 'nyc-citibike',
@@ -317,6 +342,100 @@ const RAW_GBFS_CITY_REGISTRY = [
     centerLat: 34.4208,
     centerLon: -119.6982,
     systemId: 'bcycle_santabarbara',
+  }),
+  pbscEntry({
+    id: 'buenos-aires-ecobici',
+    city: 'Buenos Aires, Argentina',
+    centerLat: -34.6037,
+    centerLon: -58.4,
+    host: 'buenosaires',
+    provider: 'Ecobici (GCBA)',
+  }),
+  {
+    id: 'mexico-city-ecobici',
+    city: 'Ciudad de México, México',
+    centerLat: 19.42,
+    centerLon: -99.165,
+    loadRadiusKm: 60,
+    stationInformationUrl:
+      'https://gbfs.mex.lyftbikes.com/gbfs/en/station_information.json',
+    stationStatusUrl:
+      'https://gbfs.mex.lyftbikes.com/gbfs/en/station_status.json',
+    provider: 'Ecobici CDMX',
+  },
+  pbscEntry({
+    id: 'guadalajara-mibici',
+    city: 'Guadalajara, México',
+    centerLat: 20.6767,
+    centerLon: -103.36,
+    host: 'guadalajara',
+    provider: 'MiBici',
+  }),
+  pbscEntry({
+    id: 'bogota-tembici',
+    city: 'Bogotá, Colombia',
+    centerLat: 4.68,
+    centerLon: -74.06,
+    host: 'bogota',
+    provider: 'Tembici Bogotá',
+  }),
+  pbscEntry({
+    id: 'santiago-bike-itau',
+    city: 'Santiago, Chile',
+    centerLat: -33.42,
+    centerLon: -70.59,
+    host: 'santiago',
+    provider: 'Bike Itaú Santiago',
+  }),
+  pbscEntry({
+    id: 'sao-paulo-bike-itau',
+    city: 'São Paulo, Brasil',
+    centerLat: -23.58,
+    centerLon: -46.68,
+    host: 'saopaulo',
+    provider: 'Bike Itaú Sampa',
+    loadRadiusKm: 70,
+  }),
+  pbscEntry({
+    id: 'rio-bike-itau',
+    city: 'Rio de Janeiro, Brasil',
+    centerLat: -22.96,
+    centerLon: -43.19,
+    host: 'riodejaneiro',
+    provider: 'Bike Itaú Rio',
+    loadRadiusKm: 70,
+  }),
+  pbscEntry({
+    id: 'recife-bike-itau',
+    city: 'Recife, Brasil',
+    centerLat: -8.0476,
+    centerLon: -34.877,
+    host: 'recife',
+    provider: 'Bike Itaú Pernambuco',
+  }),
+  pbscEntry({
+    id: 'porto-alegre-bike',
+    city: 'Porto Alegre, Brasil',
+    centerLat: -30.04,
+    centerLon: -51.22,
+    host: 'portoalegre',
+    provider: 'Bike Porto Alegre',
+  }),
+  pbscEntry({
+    id: 'brasilia-bike',
+    city: 'Brasília, Brasil',
+    centerLat: -15.788,
+    centerLon: -47.883,
+    host: 'brasilia',
+    provider: 'Bike Brasília',
+  }),
+  pbscEntry({
+    id: 'curitiba-bike',
+    city: 'Curitiba, Brasil',
+    centerLat: -25.435,
+    centerLon: -49.283,
+    host: 'curitiba',
+    provider: 'Bike Curitiba',
   }),
 ];
 function normalizeRegistryEntry(entry) {
