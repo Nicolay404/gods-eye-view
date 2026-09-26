@@ -27,9 +27,9 @@ test('the complete Realtime tool payload pins the additive analyst, satellite, L
     .digest('hex');
   assert.equal(
     digest,
-    // Re-derived for the additive `local-adsb` set_layer_visibility value and
-    // the Cyber HUD layout; the separate sonar tool is excluded above.
-    '590d537d93e132ac64ac5e211ad5bb9d7d1b1f22e2dd963dda5465fab4510a3b',
+    // Re-derived for the additive `s2-cloudless-2024` set_map_stack value;
+    // without it the payload hashes to the previous pin (590d537d…510a3b).
+    '4f14211cd358092cdd8c9e11a4d822a3ef18107c327fa2f9d3b45c0080bd2e8b',
   );
 });
 
@@ -112,6 +112,10 @@ test('all legacy action arguments are byte-identical after removing the delibera
         value.enum = value.enum.filter((key) => key !== 'fire-perimeters');
     }
   }
+  // The Sentinel-2 cloudless basemap is an additive set_map_stack value.
+  const stacks = legacy.find((tool) => tool.name === 'set_map_stack').parameters
+    .properties.stack;
+  stacks.enum = stacks.enum.filter((id) => id !== 's2-cloudless-2024');
   // Independently derived by executing trusted c9f9896 actionSchemas in the restricted container.
   const hud = legacy.find((tool) => tool.name === 'set_hud').parameters
     .properties.layout;

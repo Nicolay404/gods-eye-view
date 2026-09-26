@@ -5,7 +5,9 @@ import {
   createOsmImagery,
   createEsriImagery,
   createIonImagery,
+  createS2CloudlessImagery,
   ESRI_ATTRIBUTION_HTML,
+  S2_CLOUDLESS_ATTRIBUTION_HTML,
 } from './imagery.js';
 import { createWorldTerrain, createKeylessTerrain } from './terrain.js';
 
@@ -49,7 +51,9 @@ export function createDefaultMapSources({
           ? () => createIonImagery(descriptor.style, ionToken)
           : descriptor.id === 'osm'
             ? createOsmImagery
-            : createEsriImagery;
+            : descriptor.kind === 's2-cloudless'
+              ? createS2CloudlessImagery
+              : createEsriImagery;
       return {
         ...common,
         imagery,
@@ -65,6 +69,20 @@ export function createDefaultMapSources({
                 id: 'osm',
                 threshold: 2,
                 message: 'Esri Satellite tile requests failed; using OSM',
+              },
+            }
+          : {}),
+        ...(descriptor.kind === 's2-cloudless'
+          ? {
+              credit: S2_CLOUDLESS_ATTRIBUTION_HTML,
+              constructionFallback: {
+                id: 'esri-imagery',
+                message: 'Sentinel-2 imagery is unavailable; using Esri',
+              },
+              tileFailureFallback: {
+                id: 'esri-imagery',
+                threshold: 2,
+                message: 'Sentinel-2 tile requests failed; using Esri',
               },
             }
           : {}),

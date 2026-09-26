@@ -666,6 +666,9 @@ test('the voice TOOL SCHEMA matches the pinned release — the mission mapping i
   assert.deepEqual(hudLayout.enum, ['tactical', 'operator', 'minimal', 'cyber']);
   // Cyber deliberately adds one layout; first-run missions still change no tools.
   hudLayout.enum = hudLayout.enum.filter((layout) => layout !== 'cyber');
+  // The Sentinel-2 cloudless basemap deliberately adds one set_map_stack value.
+  const mapStack = legacyTools.find((tool) => tool.name === 'set_map_stack').parameters.properties.stack;
+  mapStack.enum = mapStack.enum.filter((id) => id !== 's2-cloudless-2024');
   const block = JSON.stringify(legacyTools);
   // Re-derived for the additive `local-adsb` set_layer_visibility value and
   // its common-name mapping; the missions still ride existing tools.
